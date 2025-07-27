@@ -1,0 +1,49 @@
+stages:
+  - scan
+
+variables:
+  TRIVY_NON_SSL: "true"
+
+# 1. Análise de Imagem Docker
+scan:image:
+  stage: scan
+  image: aquasec/trivy:latest
+  script:
+    - echo "📦 Escaneando imagem Docker"
+    - docker pull alpine:3.18
+    - trivy image --exit-code 0 --severity HIGH,CRITICAL alpine:3.18
+  rules:
+    - when: always
+
+# 2. Análise de Sistema de Arquivos (diretório atual)
+scan:filesystem:
+  stage: scan
+  image: aquasec/trivy:latest
+  script:
+    - echo "📂 Escaneando sistema de arquivos local"
+    - trivy fs --scanners vuln,secret,config --exit-code 0 .
+  rules:
+    - when: always
+
+# 3. Análise de Repositório Git
+scan:repo:
+  stage: scan
+  image: aquasec/trivy:latest
+  script:
+    - echo "🔗 Escaneando repositório remoto"
+    - trivy repo https://github.com/aquasecurity/trivy
+  rules:
+    - when: always
+
+# 4. Análise de IaC (Infraestrutura como Código)
+scan:iac:
+  stage: scan
+  image: aquasec/trivy:latest
+  script:
+    - echo "🏗️ Escaneando IaC (Dockerfile e YAML)"
+    - mkdir iac
+    - echo "FROM alpine" > iac/Dockerfile
+    - trivy config iac/
+  rules:
+    - when: always
+
