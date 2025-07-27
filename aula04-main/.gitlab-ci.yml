@@ -1,0 +1,32 @@
+stages:
+  - build
+  - validate
+  - test
+
+build-image:
+  stage: build
+  tags:
+    - rootless
+  script:
+    - echo "🔧 Buildando imagem"
+    - docker info
+    - docker build -t php-app .
+
+validate-compose:
+  stage: validate
+  tags:
+    - rootless
+  script:
+    - echo "✅ Validando docker-compose"
+    - docker compose config
+
+run-compose:
+  stage: test
+  tags:
+    - rootless
+  script:
+    - echo "🚀 Subindo app com docker-compose"
+    - docker compose up -d
+    - sleep 5
+    - docker compose ps -a
+
