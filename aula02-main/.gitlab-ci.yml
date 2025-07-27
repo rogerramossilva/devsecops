@@ -1,0 +1,18 @@
+stages:
+  - test
+
+test-job:
+  stage: test
+  script:
+    - echo "Ambiente funcionando"
+    - uname -a
+    - cat /etc/os-release
+
+docker-info:
+  stage: test
+  tags:
+    - rootless
+  script:
+    - docker ps
+    - docker info
+    - docker images
