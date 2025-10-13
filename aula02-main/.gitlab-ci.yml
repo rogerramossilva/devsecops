@@ -14,4 +14,6 @@ docker-info:
     - rootless
   script:
     - docker ps
+    - docker info
+    - docker images
 
