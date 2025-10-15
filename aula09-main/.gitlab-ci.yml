@@ -1,0 +1,20 @@
+stages:
+  - lint
+  - scan
+
+lint-dockerfile:
+  stage: lint
+  script:
+    - docker run --rm -i hadolint/hadolint < Dockerfileinseguro > hadolint-report.txt || true
+  artifacts:
+    paths:
+      - hadolint-report.txt
+
+dockle-scan:
+  stage: scan
+  script:
+    - docker run --rm goodwithtech/dockle:latest rogerramossilva/myapp:latest > dockle-report.txt || true
+  artifacts:
+    paths:
+      - dockle-report.txt
+    expire_in: 1 week
