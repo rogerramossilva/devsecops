@@ -1,0 +1,92 @@
+variables:
+  IMAGE_NAME: rogerramossilva/appfinal
+  IMAGE_TAG: latest
+  IMAGE_FULL: "$IMAGE_NAME:$IMAGE_TAG"
+  DOCKER_BUILDKIT: 1
+
+stages:
+  - lint
+  - build
+  - push
+  - scan
+  - inspect
+  - sign
+  - verify
+
+# Etapa 1: Validação do Dockerfile com Hadolint
+lint-dockerfile:
+  stage: lint
+  script:
+    - docker run --rm -i hadolint/hadolint < Dockerfile > hadolint-report.txt || true
+  artifacts:
+    paths:
+      - hadolint-report.txt
+
+# Etapa 2: Build seguro com BuildKit.
+build-dev:
+  stage: build
+  script:
+    - echo "⚙️ Build da imagem com BuildKit"
+    - docker build --progress=plain -t $IMAGE_FULL -f Dockerfile .
+  artifacts:
+    name: "image-dev"
+    expire_in: 1 hour
+
+push_image:
+  stage: push
+  script:
+    - echo "📤 Login no Docker Hub"
+    - echo "$CI_REGISTRY_PASSWORD" | docker login -u "$CI_REGISTRY_USER" --password-stdin
+    - echo "📦 Push da imagem $IMAGE_FULL"
+    - docker push $IMAGE_FULL
+  needs: ["build-dev"]
+
+# Etapa 3: Scan com Dockle
+dockle-scan:
+  stage: scan
+  script:
+    - echo "🔎 Scan da imagem com Dockle"
+    - docker run --rm -v goodwithtech/dockle "$IMAGE_FULL" > dockle-report.txt || true
+  artifacts:
+    paths:
+      - dockle-report.txt
+    expire_in: 1 week
+  needs: ["build-dev"]
+
+# Etapa 4: Inspeção com Skopeo
+skopeo-inspect:
+  stage: inspect
+#  image: quay.io/skopeo/stable
+  image: docker.io/library/skopeo:latest
+  script:
+    - echo "🔍 Inspeção da imagem local com Skopeo"
+    - skopeo --version
+    - skopeo inspect --creds "$CI_REGISTRY_USER:$CI_REGISTRY_PASSWORD" docker://docker.io/$IMAGE_FULL
+  needs: ["build-dev"]
+
+# Etapa 5: Assinatura com Cosign
+sign_cosign:
+  stage: sign
+  script:
+    - export COSIGN_PASSWORD=""
+    - echo "🔐 Gerando par de chaves Cosign"
+    - echo "y" | cosign generate-key-pair
+    - mkdir -p keys
+    - mv cosign.key cosign.pub keys/
+    - cosign sign --yes --key keys/cosign.key docker.io/$IMAGE_FULL
+  needs: ["push_image"]
+  artifacts:
+    paths:
+      - keys/
+    expire_in: 1 hour
+
+# Etapa 6: Verificação com Cosign
+verify_cosign:
+  stage: verify
+  script:
+    - echo "🔍 Verificando assinatura com Cosign"
+    - cosign verify --key keys/cosign.pub docker.io/$IMAGE_FULL
+  needs: ["sign_cosign"]
+  dependencies:
+    - sign_cosign
+
