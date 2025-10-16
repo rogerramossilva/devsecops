@@ -1,0 +1,30 @@
+# Etapa 1: build com cache de dependências
+FROM golang:1.21 AS builder
+WORKDIR /build
+
+# Copiar go.mod para baixar dependências e cachear essa etapa
+COPY go.mod ./
+RUN go mod download
+
+# Copiar código-fonte
+COPY . .
+
+# Build do binário
+RUN go build -o app
+
+
+
+
+# Etapa 2: imagem final mínima e segura
+FROM gcr.io/distroless/static:nonroot
+COPY --from=builder /build/app /usr/local/bin/app
+
+# Definir usuário não root
+USER nonroot:nonroot
+
+# Porta de exposição (opcional)
+EXPOSE 8080
+
+# Comando de inicialização
+ENTRYPOINT ["/usr/local/bin/app"]
+

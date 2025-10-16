@@ -1,0 +1,5 @@
+# Dockerfile simples para demonstração
+FROM debian:bullseye-slim
+
+RUN apt-get update && apt-get install -y curl
+RUN curl -s https://httpbin.org/ip

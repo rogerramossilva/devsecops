@@ -1,0 +1,21 @@
+# Etapa opcional: preparação de configuração
+FROM alpine AS config
+WORKDIR /config
+COPY my.cnf .
+
+
+# Etapa final: imagem oficial do MariaDB
+FROM mariadb:10.5
+
+# Copia configuração customizada
+COPY --from=config /config/my.cnf /etc/mysql/my.cnf
+
+# Usa segredo para definir MYSQL_ROOT_PASSWORD
+# Isso será passado no docker run como envvar (em tempo de runtime)
+# No build, apenas acessamos via BuildKit para mostrar exemplo
+
+RUN --mount=type=secret,id=db_root_password \
+    echo "Senha secreta definida com sucesso (não persistida no build)"
+
+# Expor porta do banco
+EXPOSE 3306

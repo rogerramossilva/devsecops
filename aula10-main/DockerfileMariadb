@@ -1,0 +1,12 @@
+FROM mariadb:10.5
+
+# ⚠️ INSEGURO — senha hardcoded no Dockerfile
+ENV MYSQL_ROOT_PASSWORD=inseguro123
+
+# Opcional: criar um banco e usuário também inseguros
+ENV MYSQL_DATABASE=lab_inseguro
+ENV MYSQL_USER=admin
+ENV MYSQL_PASSWORD=senha123
+
+EXPOSE 3306
+
