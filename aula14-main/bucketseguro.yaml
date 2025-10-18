@@ -1,0 +1,44 @@
+Resources:
+  MySecureBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: "my-secure-bucket"
+      AccessControl: Private  # Restringe acesso público
+
+      VersioningConfiguration:
+        Status: Enabled  # Habilita versionamento
+
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        IgnorePublicAcls: true
+        BlockPublicPolicy: true
+        RestrictPublicBuckets: true
+
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256  # Criptografia padrão
+
+      LoggingConfiguration:
+        DestinationBucketName: !Ref MySecureBucketLogs  # Logs vão para bucket de logs
+        LogFilePrefix: "log/"
+
+  MySecureBucketLogs:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: "my-secure-bucket-logs"
+      AccessControl: LogDeliveryWrite  # Permite gravar logs
+
+      VersioningConfiguration:
+        Status: Enabled  # Habilita versionamento no bucket de logs
+
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        IgnorePublicAcls: true
+        BlockPublicPolicy: true
+        RestrictPublicBuckets: true
+
+      LoggingConfiguration:  # Habilita logging no bucket de logs (logs de logs)
+        DestinationBucketName: !Ref MySecureBucketLogs
+        LogFilePrefix: "log-logs/"
+

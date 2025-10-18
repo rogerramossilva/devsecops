@@ -1,0 +1,11 @@
+FROM ubuntu:22.04
+
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends curl && \
+    rm -rf /var/lib/apt/lists/*
+
+HEALTHCHECK CMD curl -f http://localhost || exit 1
+
+USER nobody
+
+CMD ["bash"]
