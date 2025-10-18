@@ -1,0 +1,26 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: secure-nginx
+spec:
+  containers:
+  - name: app
+    image: nginx
+    securityContext:
+      runAsUser: 1000           # Usuário não-root
+      runAsNonRoot: true        # Força não usar root
+      readOnlyRootFilesystem: true
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop: ["ALL"]           # Remove todas as capabilities extras
+    volumeMounts:
+    - name: nginx-cache
+      mountPath: /var/cache/nginx
+    - name: nginx-run
+      mountPath: /run
+  volumes:
+  - name: nginx-cache
+    emptyDir: {}
+  - name: nginx-run
+    emptyDir: {}
+
