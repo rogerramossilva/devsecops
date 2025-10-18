@@ -1,0 +1,9 @@
+---
+# tasks file for roles/hardening
+- name: Desabilitar login root via SSH
+  lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: '^PermitRootLogin'
+    line: 'PermitRootLogin no'
+  notify: Restart SSH
+
