@@ -1,0 +1,28 @@
+stages:
+  - validate
+
+conftest_scan:
+  image: openpolicyagent/conftest
+  stage: validate
+  script:
+    - cd terraform
+    - terraform init
+    - terraform plan -out=tfplan.binary
+    - terraform show -json tfplan.binary > tfplan.json
+    - conftest test tfplan.json --policy policy
+  allow_failure: false
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+      when: always
+
+conftest_scan_k8s: # Novo Job para Kubernetes
+  image: openpolicyagent/conftest:latest # Usando a mesma imagem
+  stage: validate
+  script:
+    - cd k8s
+    # Ajuste o caminho para o seu arquivo YAML do Kubernetes e o diretório de políticas, se necessário
+    - conftest test deployment.yaml --policy policy
+  allow_failure: false
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+      when: always
