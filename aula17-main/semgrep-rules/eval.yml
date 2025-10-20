@@ -1,0 +1,9 @@
+rules:
+  - id: uso-de-eval
+    pattern: eval($X)
+    message: "⚠️ Uso de eval() pode levar à execução arbitrária de código."
+    languages: [python]
+    severity: WARNING
+    metadata:
+      cwe: "CWE-95"
+      category: security
