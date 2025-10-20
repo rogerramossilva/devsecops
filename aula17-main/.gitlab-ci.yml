@@ -1,0 +1,18 @@
+stages:
+  - sast
+
+semgrep_sast:
+  stage: sast
+  script:
+    - docker run --rm -v "$PWD":/src -w /src returntocorp/semgrep semgrep --config=auto src --sarif -o semgrep.sarif
+  artifacts:
+    paths:
+      - semgrep.sarif
+    when: always
+    reports:
+      sast: semgrep.sarif
+
+sonarqube_scan:
+  stage: sast
+  script:
+    - docker run --rm -v "$PWD":/usr/src -w /usr/src sonarsource/sonar-scanner-cli -Dsonar.projectKey=devsecops -Dsonar.sources=src -Dsonar.host.url=http://192.168.15.96:9000 -Dsonar.login=$SONAR_TOKEN
