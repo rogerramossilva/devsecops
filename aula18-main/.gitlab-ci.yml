@@ -1,0 +1,44 @@
+stages:
+  - setup
+  - dast
+
+# 1. Subir a aplicação vulnerável Juice Shop..
+setup_juice_shop:
+  stage: setup
+  script:
+    - docker ps -a  # apenas para confirmar que o Docker está funcionando
+    - |
+      if [ "$(docker ps -aq -f name=juice-shop)" ]; then
+        echo "⚠️ O container juice-shop já existe. Ignorando criação."
+      else
+        echo "🚀 Subindo o container juice-shop..."
+        docker run -d -p 3000:3000 --name juice-shop bkimminich/juice-shop
+      fi
+  only:
+    - main
+
+zap_baseline_scan:
+  stage: dast
+  script:
+    - mkdir -p relatorios
+    - docker run --rm -u 0 -v "$PWD/relatorios:/zap/wrk" ghcr.io/zaproxy/zaproxy zap-baseline.py -t http://192.168.15.91:3000 -r zap_report.html -I || echo "⚠️ Vulnerabilidades encontradas."
+  artifacts:
+    paths:
+      - relatorios/zap_report.html
+    when: always
+    expire_in: 1 week
+  allow_failure: true
+
+
+# 3. Rodar ZAP full scan (ativo)
+zap_full_scan:
+  stage: dast
+  script:
+    - mkdir -p relatorios
+    - docker run --rm -u 0 -v "$PWD/relatorios:/zap/wrk" ghcr.io/zaproxy/zaproxy zap-full-scan.py -t http://192.168.15.91:3000 -r zap_report_full.html -I || echo "⚠️ Vulnerabilidades encontradas pelo ZAP. Relatório gerado para auditoria."
+  artifacts:
+    paths:
+      - relatorios/zap_report_full.html
+    when: always
+    expire_in: 1 week
+  allow_failure: true
