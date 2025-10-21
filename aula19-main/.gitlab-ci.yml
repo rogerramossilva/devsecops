@@ -1,0 +1,107 @@
+stages:
+  - scan
+  - upload
+
+# =============================
+# 1️⃣ SCANS
+# =============================
+
+# --- Trivy Scan ---
+trivy_scan:
+  stage: scan
+  script:
+    - mkdir -p reports
+    - echo "Executando scan com Trivy..."
+    - trivy image --format json --output reports/trivy-container.json nginx:latest || true
+    - if [ ! -s reports/trivy-container.json ]; then echo "Relatório Trivy vazio!"; exit 1; fi
+  artifacts:
+    paths:
+      - reports/trivy-container.json
+    expire_in: 1 day
+
+# --- Nmap Scan ---
+nmap_scan:
+  stage: scan
+  script:
+    - mkdir -p reports
+    - echo "Executando scan com Nmap..."
+    - nmap -oX reports/nmap.xml 192.168.15.96/32
+    - if [ ! -s reports/nmap.xml ]; then echo "Relatório Nmap vazio!"; exit 1; fi
+  artifacts:
+    paths:
+      - reports/nmap.xml
+    expire_in: 1 day
+
+# --- Checkov Scan ---
+checkov_scan:
+  image: python:3.11
+  stage: scan
+  script:
+    - echo "Ativando ambiente e executando Checkov..."
+    - python3 -m venv venv && . venv/bin/activate
+    - pip install -q checkov
+    - mkdir -p reports
+    - checkov -d src -o json > reports/checkov.json || true
+    - if [ ! -s reports/checkov.json ]; then echo "Relatório Checkov vazio!"; exit 1; fi
+  artifacts:
+    paths:
+      - reports/checkov.json
+    expire_in: 1 day
+
+
+# =============================
+# 2️⃣ UPLOADS
+# =============================
+
+# --- Upload Trivy ---
+upload_trivy:
+  stage: upload
+  needs:
+    - job: trivy_scan
+      artifacts: true
+  script:
+    - echo "Enviando relatório Trivy para DefectDojo..."
+    - |
+      curl -X POST "$DEFECTDOJO_URL/api/v2/import-scan/" \
+        -H "Authorization: Token $DEFECTDOJO_TOKEN" \
+        -F "scan_type=Trivy Scan" \
+        -F "file=@reports/trivy-container.json" \
+        -F "engagement=$ENGAGEMENT_ID"
+  rules:
+    - if: $DEFECTDOJO_URL && $DEFECTDOJO_TOKEN && $ENGAGEMENT_ID
+
+# --- Upload Nmap ---
+upload_nmap:
+  stage: upload
+  needs:
+    - job: nmap_scan
+      artifacts: true
+  script:
+    - echo "Enviando relatório Nmap para DefectDojo..."
+    - |
+      curl -X POST "$DEFECTDOJO_URL/api/v2/import-scan/" \
+        -H "Authorization: Token $DEFECTDOJO_TOKEN" \
+        -F "scan_type=Nmap Scan" \
+        -F "file=@reports/nmap.xml" \
+        -F "engagement=$ENGAGEMENT_ID"
+  rules:
+    - if: $DEFECTDOJO_URL && $DEFECTDOJO_TOKEN && $ENGAGEMENT_ID
+
+# --- Upload Checkov ---
+upload_checkov:
+  stage: upload
+  needs:
+    - job: checkov_scan
+      artifacts: true
+  script:
+    - echo "Enviando relatório Checkov para DefectDojo..."
+    - |
+      curl -X POST "$DEFECTDOJO_URL/api/v2/import-scan/" \
+        -H "Authorization: Token $DEFECTDOJO_TOKEN" \
+        -F "scan_type=Checkov Scan" \
+        -F "file=@reports/checkov.json" \
+        -F "engagement=$ENGAGEMENT_ID"
+  rules:
+    - if: $DEFECTDOJO_URL && $DEFECTDOJO_TOKEN && $ENGAGEMENT_ID
+
+
